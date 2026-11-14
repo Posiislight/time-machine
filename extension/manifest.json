@@ -1,0 +1,8 @@
+{
+  "manifest_version": 3,
+  "name": "Time Machine for Maritime",
+  "version": "0.2.0",
+  "description": "Open a local checkpoint recovery workspace alongside Maritime. No credentials or page content collected.",
+  "action": {"default_popup": "popup.html", "default_title": "Time Machine"},
+  "content_scripts": [{"matches": ["https://maritime.sh/*", "https://*.maritime.sh/*"], "js": ["content.js"]}]
+}
