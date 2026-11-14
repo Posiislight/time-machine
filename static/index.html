@@ -1,14 +1,100 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Time Machine · Local workspace</title><link rel="stylesheet" href="/style.css"></head><body>
-<aside><div class="brand"><span aria-hidden="true">↶</span><div>time machine<small>for Maritime</small></div></div><p class="muted">An agent recovery workspace</p><button id="liveHome">Open live workspace</button><button id="settings" class="ghost">Settings / API keys</button><button id="sample">＋ Load sample</button><button id="maritime" class="ghost">Connect Maritime</button><button id="new" class="ghost">＋ New task</button><div class="eyebrow">YOUR RUNS</div><button id="shopping">Shopping recovery demo</button><button id="uncertain" class="ghost">Uncertain payment demo</button><nav id="sessions"></nav><nav id="runs"></nav><footer>LOCAL DEVELOPMENT<br><span id="connection">Checking configuration…</span></footer></aside>
-<main><header><div><div class="eyebrow">TIME MACHINE / WORKSPACE</div><h1 id="title">Every step. A way back.</h1><p id="subtitle">Inspect. Branch. Continue.</p></div><span class="badge" id="status">LOCAL</span></header><div id="notice" role="status"></div>
-<section id="livePanel" class="panel">
-<div class="eyebrow">LIVE WORKSPACE / LOCAL APP</div><h2>Your agent's computer, with a recorded history.</h2><p>Connect a Maritime desktop or Android phone. Watch the screen, operate apps, and ask your model for the next step.</p>
-<div class="liveConnect"><label>Computer user<input id="liveUser" value="time-machine-local"></label><label>Environment<select id="liveOS"><option value="linux">Linux desktop</option><option value="android">Android phone</option><option value="windows">Windows desktop</option></select></label><button id="connectLive">Connect computer</button></div><p class="muted">Connecting may start or wake a remote computer and incur Maritime usage charges. The app and history run locally.</p><p id="liveStatus">Not connected. Add your keys in Settings to begin.</p>
-<div class="liveGrid"><div><div id="screenPlaceholder">Your live screen will appear here</div><img id="liveScreen" alt="Live Maritime computer screenshot" hidden><button id="captureLive" class="ghost">Refresh screen</button><button id="checkpointLive" class="ghost">Save observation checkpoint</button><button id="historyLive" class="ghost">View recovery history</button></div><div><h3>Task</h3><textarea id="liveTask" rows="4" placeholder="Find headphones within my budget and compare the options."></textarea><button id="suggestLive">Suggest next step</button><p id="suggestionText"></p><button id="applySuggestion" hidden>Apply reviewed action</button><h3>Computer controls</h3><p class="muted">Click the screen to click the computer. Review the destination before submitting forms.</p><input id="liveText" placeholder="Text to type"><button id="typeLive" class="ghost">Type text</button><select id="liveKey"><option>Return</option><option>Escape</option><option>Tab</option><option>ctrl+l</option><option>Home</option></select><button id="keyLive" class="ghost">Press key</button><p id="actionOutcome"></p><button id="resolveLive" class="ghost" hidden>I checked: no external transaction occurred</button></div></div></section>
-<dialog id="settingsDialog"><form id="settingsForm"><p id="settingsStatus" role="status" aria-live="polite"></p><h2>Connect your providers</h2><p>Keys are saved in the local .env file and are never returned to this page. Leave a field blank to keep its existing value.</p><label>Maritime API key<input id="maritimeKey" type="password" autocomplete="off"></label><label>OpenRouter API key<input id="routerKey" type="password" autocomplete="off"></label><label>Model ID (must support images)<input id="routerModel" placeholder="Provider/model ID"></label><p class="muted">The previously selected GLM model ID has not been verified. Computer suggestions need an available model with image input support.</p><div class="actions"><button id="cancelSettings" type="button" class="ghost">Cancel</button><button id="saveSettings" type="submit">Save locally</button></div></form></dialog>
-<section id="sessionPanel" class="panel" hidden><div class="eyebrow">SESSION RECOVERY</div><h2 id="sessionTitle"></h2><p>Simulated shopping session. Device and network observations do not restore live machines.</p><div id="sessionCheckpoints"></div><h3>Resource state</h3><pre id="resourceState"></pre><h3>External action ledger</h3><div id="effectLedger"></div><h3>Execution timeline</h3><div id="eventTimeline"></div></section>
-<dialog id="rewindDialog"><h2>Review rewind consequences</h2><div id="rewindResources"></div><div id="rewindWarnings" role="alert"></div><label><input type="checkbox" id="acknowledgeRewind"> I understand these consequences.</label><div class="actions"><button id="cancelRewind" class="ghost">Cancel</button><button id="confirmRewind">Create recovered branch</button></div></dialog>
-<section id="empty" class="empty" hidden><div class="orb">◴</div><h2>A second chance, without starting over.</h2><p>Load the catalogue sample to explore real file checkpoints.<br>No API key needed. Sample pricing is intentionally incorrect.</p></section>
-<div id="workspace" hidden><div class="toolbar"><span id="model"></span><div><button id="demo" class="ghost">Run offline recovery</button><button id="save" class="ghost">Save checkpoint</button><button id="execute">Run with GLM ↗</button></div></div><div class="grid"><section class="panel"><div class="eyebrow">01 / HISTORY</div><h2>Checkpoints</h2><div id="checkpoints"></div></section><section class="panel files"><div class="eyebrow">02 / CURRENT WORKSPACE</div><h2>Files & outputs</h2><div id="files"></div><button id="add" class="ghost">＋ Add text / CSV file</button><pre id="preview">Select a file to inspect its contents.</pre></section><section class="panel"><div class="eyebrow">03 / TRY ANOTHER APPROACH</div><h2>Start a branch</h2><button id="compare" class="ghost">Compare with workspace</button><p id="selected">Choose a checkpoint from the timeline.</p><label for="instruction">New instruction</label><textarea id="instruction" rows="6">Supplier prices are per carton. Divide by pack size, then apply a 30% markup. Save catalogue.csv.</textarea><button id="branch">Branch from checkpoint →</button><p class="muted">Creates a separate workspace. The original run stays unchanged.</p></section></div><section class="panel activity"><div class="eyebrow">AGENT ACTIVITY</div><div id="messages"></div></section><p class="boundary">Workspace files + agent context are restored. External actions and running processes are not reversed.</p></div></main>
-<dialog id="createDialog"><form id="createForm"><h2>New task</h2><label>Task title<input id="taskTitle" required maxlength="120" placeholder="Prepare a supplier comparison"></label><label>Instructions<textarea id="taskPrompt" required rows="5" placeholder="Describe the files you will add and the output you want."></textarea></label><div class="actions"><button type="button" id="cancelNew" class="ghost">Cancel</button><button>Create task</button></div></form></dialog>
-<dialog id="fileDialog"><form id="fileForm"><h2>Add a workspace file</h2><label>Relative filename<input id="fileName" required placeholder="supplier.csv"></label><label>Text content<textarea id="fileContent" rows="10" required></textarea></label><div class="actions"><button type="button" id="cancelFile" class="ghost">Cancel</button><button>Save file</button></div></form></dialog><dialog id="maritimeDialog"><form id="maritimeForm"><h2>Import from Maritime</h2><p>Capture selected text files into a local checkpoint. This may wake your remote agent and incur compute charges. Remote files stay unchanged.</p><button type="button" id="listAgents" class="ghost">List my agents</button><pre id="remoteAgents"></pre><label>Agent ID<input id="remoteAgent" required></label><button type="button" id="listRemote" class="ghost">Browse root files</button><pre id="remoteFiles"></pre><label>Absolute file paths (one per line)<textarea id="remotePaths" rows="5" required placeholder="/data/report.csv"></textarea></label><div class="actions"><button type="button" id="cancelMaritime" class="ghost">Cancel</button><button>Capture locally</button></div></form></dialog><script src="/app.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Time Machine · Rewind an agent safely</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<aside>
+  <a class="brand" href="/" id="brand"><span aria-hidden="true">↶</span><div>Time Machine<small>for Maritime</small></div></a>
+  <button id="newSession" class="primary">New session</button>
+  <div class="eyebrow">Sessions</div>
+  <nav id="sessions" aria-label="Sessions"></nav>
+  <footer>
+    <button id="openSettings" class="link">Maritime &amp; model keys</button>
+    <span id="connection" class="muted"></span>
+  </footer>
+</aside>
+
+<main>
+  <div id="notice" role="status" aria-live="polite" hidden></div>
+
+  <section id="home">
+    <p class="eyebrow">Time Machine</p>
+    <h1>Rewind an AI agent to the last good moment, without redoing the work.</h1>
+    <p class="lead">Every step an agent takes on a Maritime machine is saved as a snapshot. When it goes wrong, pick an earlier moment and continue from a fresh machine. Anything that reached the outside world, such as a payment, an email or a published release, is kept on a list that a rewind never repeats.</p>
+
+    <form id="startForm" class="start">
+      <label for="sessionName">Name this session</label>
+      <div class="row">
+        <input id="sessionName" required maxlength="120" autocomplete="off" placeholder="e.g. Build the landing page">
+        <button class="primary" id="startBtn" type="submit">Start a machine</button>
+      </div>
+      <p class="muted small" id="startHint">This starts a Maritime machine on your account. Machines you start here use your plan's credit.</p>
+    </form>
+
+    <ol class="steps">
+      <li><span class="num">1</span><h3>Work happens on a machine</h3><p>Run commands, or let your agent run them through the API. Each step saves a snapshot.</p></li>
+      <li><span class="num">2</span><h3>Choose a moment</h3><p>Click a snapshot. You see what would come back and what would not.</p></li>
+      <li><span class="num">3</span><h3>Rewind</h3><p>A new machine starts from that snapshot. Actions already taken stay on record and are never repeated.</p></li>
+    </ol>
+  </section>
+
+  <section id="session" hidden>
+    <header>
+      <div>
+        <p class="eyebrow" id="kicker">Session</p>
+        <h1 id="title"></h1>
+      </div>
+      <div class="head-right">
+        <span class="badge" id="badge"></span>
+        <button id="endMachine" class="ghost small" hidden>End machine</button>
+      </div>
+    </header>
+    <div id="guide" class="guide" hidden></div>
+    <div class="cols">
+      <section class="panel">
+        <h2>What happened</h2>
+        <p class="muted small">Each snapshot is the machine right after that step. Click one to see what rewinding to it would do.</p>
+        <ol id="timeline" class="timeline"></ol>
+      </section>
+      <div class="stack">
+        <section class="panel" id="work">
+          <h2>Work on the machine</h2>
+          <form id="runForm" class="run">
+            <label for="cmd" class="sr">Command</label>
+            <div class="row"><input id="cmd" autocomplete="off" spellcheck="false" placeholder="Command, e.g. echo hello > notes.txt"><button class="primary" id="runBtn" type="submit">Run</button></div>
+            <label class="check"><input type="checkbox" id="external"> This changes something outside the machine (email, payment, API call)</label>
+            <input id="externalWhat" hidden autocomplete="off" placeholder="What does it do? e.g. Sent invoice email to a customer">
+          </form>
+          <pre id="output" class="output" hidden></pre>
+          <form id="publishForm" class="run">
+            <h3>Publish a release</h3>
+            <p class="muted small">Saves the machine as a named snapshot others can start from. Rewinding never removes it.</p>
+            <div class="row"><input id="releaseName" autocomplete="off" placeholder="release-name" pattern="[a-z0-9][a-z0-9\-]{0,62}"><button id="publishBtn" type="submit">Publish</button></div>
+          </form>
+        </section>
+        <section class="panel" id="previewPanel" aria-live="polite">
+          <h2>If you rewind</h2>
+          <div id="preview"><p class="empty">Pick a snapshot on the timeline.</p></div>
+        </section>
+      </div>
+    </div>
+  </section>
+</main>
+
+<dialog id="settingsDialog">
+  <form id="settingsForm" method="dialog">
+    <h2>Connect your providers</h2>
+    <p class="muted">Keys are saved only in the local .env file and are never shown again. Leave a field blank to keep its current value.</p>
+    <label>Maritime API key<input id="maritimeKey" type="password" autocomplete="off"></label>
+    <label>OpenRouter API key (optional)<input id="routerKey" type="password" autocomplete="off"></label>
+    <p id="settingsStatus" role="status"></p>
+    <div class="actions"><button type="button" id="cancelSettings" class="ghost">Cancel</button><button type="submit" class="primary">Save locally</button></div>
+  </form>
+</dialog>
+<script src="/app.js"></script>
+</body>
+</html>

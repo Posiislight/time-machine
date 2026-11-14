@@ -30,6 +30,9 @@ class Live:
         if action.get('action') not in ('left_click','type','key','scroll','open_url','open_app','ui_tree'):
             raise ValueError('Unsupported live action')
         return self.request(self.path(cid)+'/actions',action)
+    def batch(self,cid,actions):
+        if not isinstance(actions,list) or not actions or len(actions)>50:raise ValueError('Between 1 and 50 computer actions are required')
+        return self.request('/api/v1/computers/'+cid+'/actions',{'actions':actions})
     def suggest(self,cid,task):
         key=os.environ.get('OPENROUTER_API_KEY','').strip()
         if not key:raise ValueError('Add your OpenRouter key in Settings first')

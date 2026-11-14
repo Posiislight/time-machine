@@ -41,11 +41,12 @@ class HTTPTests(unittest.TestCase):
         self.assertIn('31.20',server.store.read(original,'catalogue.csv'))
         self.assertEqual(Store(self.temp.name).read(run,'catalogue.csv'),file['content'])
     def test_session_preview_acknowledgment_and_rewind_http(self):
-        status,result=self.request('/api/session/demo',{})
+        status,result=self.request('/api/session/create',{'title':'Notes','resources':{'notes':{'recovery':'logical','state':{'step':'one'}}}})
         self.assertEqual(status,200)
         sid=result['id']
-        _,state=self.request('/api/session?id='+sid)
-        cp=state['checkpoints'][0]['id']
+        cp=self.request('/api/session/checkpoint',{'session':sid,'label':'Start'})[1]['id']
+        self.request('/api/session/effect',{'session':sid,'key':'a','kind':'message','status':'completed','detail':'Sent'})
+        self.request('/api/session/effect',{'session':sid,'key':'b','kind':'external','status':'completed','detail':'Posted'})
         _,plan=self.request('/api/rewind-preview?session='+sid+'&checkpoint='+cp)
         body={'session':sid,'checkpoint':cp,'receipt':plan['receipt']}
         self.assertEqual(self.request('/api/session/rewind',body)[0],400)

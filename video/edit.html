@@ -1,0 +1,141 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Time Machine cut</title>
+<script src="build2/edl.js"></script>
+<style>
+*{box-sizing:border-box;margin:0}
+html,body{width:1920px;height:1080px;overflow:hidden;background:#fff}
+body{font-family:"Segoe UI Variable Display","Segoe UI",Inter,Arial,sans-serif;color:#0b0b0f;-webkit-font-smoothing:antialiased}
+#stage{position:relative;width:1920px;height:1080px;overflow:hidden;background:radial-gradient(1200px 700px at 50% 40%,#ffffff,#f3f4f8)}
+.layer{position:absolute;inset:0}
+.cardtext{position:absolute;left:0;right:0;text-align:center}
+.h1{font-size:112px;font-weight:800;letter-spacing:-3.5px;line-height:1.04}
+.h2{font-size:76px;font-weight:700;letter-spacing:-2.2px;line-height:1.1}
+.sub{font-size:44px;font-weight:500;color:#6b7280;letter-spacing:-.5px}
+.grad{background:linear-gradient(90deg,#4f46e5,#9333ea);-webkit-background-clip:text;background-clip:text;color:transparent}
+.tag{display:inline-flex;align-items:center;gap:14px;padding:18px 30px;border-radius:999px;background:#fff;border:1px solid #e5e7eb;box-shadow:0 10px 30px rgba(20,20,60,.08);font-size:36px;font-weight:600;margin:0 12px}
+.tag i{width:16px;height:16px;border-radius:50%;display:inline-block}
+.logo{width:150px;height:150px;border-radius:40px;background:#0b0b0f;color:#fff;display:grid;place-items:center;font-size:92px;margin:0 auto}
+.screen{position:absolute;left:192px;top:92px;width:1536px;height:864px;border-radius:26px;overflow:hidden;background:#fff;box-shadow:0 40px 100px rgba(20,20,60,.22),0 0 0 1px rgba(0,0,0,.06)}
+.inner{position:absolute;left:0;top:0;transform-origin:0 0}
+.inner img{position:absolute;left:0;top:0;width:100%;height:100%}
+.blur{position:absolute;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);background:rgba(255,255,255,.35);border-radius:10px}
+.chip{position:absolute;left:192px;top:24px;display:flex;gap:12px;align-items:center;padding:10px 22px;border-radius:999px;background:#0b0b0f;color:#fff;font-size:26px;font-weight:600}
+.chip b{font-size:20px;letter-spacing:1.5px;color:#4ade80;font-weight:700}
+.speed{position:absolute;right:192px;top:24px;padding:10px 20px;border-radius:999px;background:#eef0f4;color:#111 !important;color:#fff;font-size:24px;font-weight:600}
+.cap{position:absolute;left:60px;right:60px;top:982px;text-align:center;font-size:52px;font-weight:600;letter-spacing:-1.2px;line-height:1.1;color:#2b2e38;white-space:nowrap}
+.cap b{font-weight:800;background:linear-gradient(90deg,#4f46e5,#9333ea);-webkit-background-clip:text;background-clip:text;color:transparent}
+.crash{position:absolute;inset:0;background:rgba(127,29,29,.0)}
+.crash .bar{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:30px 54px;border-radius:22px;background:#dc2626;color:#fff;font-size:56px;font-weight:800;letter-spacing:-1px;white-space:nowrap;box-shadow:0 24px 70px rgba(127,29,29,.45)}
+.ring{position:absolute;width:90px;height:90px;margin:-45px 0 0 -45px;border-radius:50%;border:6px solid #6366f1}
+.dot{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:#6366f1}
+</style></head><body><div id="stage"></div>
+<script>
+const FPS = 30, W = 1536, H = 864, $ = document.getElementById('stage');
+const E = (tag, cls, html, parent) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; (parent || $).append(e); return e; };
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const ease = p => 1 - Math.pow(1 - clamp(p), 3);
+const smooth = p => { p = clamp(p); return p * p * (3 - 2 * p); };
+function pop(el, t, t0, d = .45, y = 34) { const e = ease((t - t0) / d); el.style.opacity = e; el.style.transform = `translateY(${(1 - e) * y}px) scale(${.97 + .03 * e})`; }
+const shots = EDL.shots;
+
+// ---------- cards ----------
+const cards = {
+  hook(el, L) {
+    const a = E('div', 'cardtext h1', 'AI agents don’t just think.', el); a.style.top = '300px';
+    const b = E('div', 'cardtext h1 grad', 'They act.', el); b.style.top = '430px'; b.style.fontSize = '150px';
+    const row = E('div', 'cardtext', '', el); row.style.top = '700px';
+    const tags = [['Clean up inboxes', '#ea4335'], ['Move meetings', '#4285f4']].map(([t, c]) => E('span', 'tag', `<i style="background:${c}"></i>${t}`, row));
+    return t => { pop(a, t, L[0]); pop(b, t, L[0] + 1.25, .5, 50); a.style.color = t > L[0] + 1.25 ? '#b6bac4' : '#0b0b0f';
+      tags.forEach((g, i) => pop(g, t, L[1] + .2 + i * .55, .4, 30)); };
+  },
+  problem(el, L) {
+    const a = E('div', 'cardtext h2', 'But when one fails halfway through,', el); a.style.top = '360px';
+    const b = E('div', 'cardtext h2 grad', 'what happens to what it already did?', el); b.style.top = '470px';
+    return t => { pop(a, t, L[0]); pop(b, t, L[0] + 1.6); };
+  },
+  intro(el, L) {
+    const lg = E('div', 'cardtext', '<div class="logo">↶</div>', el); lg.style.top = '230px';
+    const a = E('div', 'cardtext h1', 'Time Machine', el); a.style.top = '410px';
+    const f = E('div', 'cardtext sub', 'for Maritime', el); f.style.top = '545px';
+    const c = E('div', 'cardtext', '<span class="tag"><i style="background:#22c55e"></i>Records every action</span><span class="tag"><i style="background:#6366f1"></i>Rewinds what can be undone</span>', el); c.style.top = '700px';
+    return t => { const e = ease((t - L[0]) / .6); lg.style.opacity = e; lg.style.transform = `rotate(${(1 - e) * -140}deg) scale(${.5 + .5 * e})`;
+      pop(a, t, L[0] + .35); pop(f, t, L[0] + .7); pop(c, t, L[1] + .2); };
+  },
+  pillars(el, L) {
+    const a = E('div', 'cardtext h2', 'One timeline.', el); a.style.top = '250px';
+    const b = E('div', 'cardtext h2 grad', 'Every action, accounted for.', el); b.style.top = '360px';
+    const items = [['Every step snapshotted', '#22c55e'], ['Preview before you rewind', '#6366f1'], ['Undoes what can be undone', '#4285f4'], ['Never repeats a sent email', '#ea4335']];
+    const r1 = E('div', 'cardtext', '', el); r1.style.top = '600px'; const r2 = E('div', 'cardtext', '', el); r2.style.top = '710px';
+    const tags = items.map(([x, c], i) => E('span', 'tag', `<i style="background:${c}"></i>${x}`, i < 2 ? r1 : r2));
+    return t => { pop(a, t, L[0]); pop(b, t, L[0] + .5); tags.forEach((g, i) => pop(g, t, L[1] + .5 + i * .6, .4, 30)); };
+  },
+  close(el, L) {
+    const lg = E('div', 'cardtext', '<div class="logo">↶</div>', el); lg.style.top = '190px';
+    const a = E('div', 'cardtext h1', 'Time Machine', el); a.style.top = '370px';
+    const b = E('div', 'cardtext h2', 'Rewind what can be undone.', el); b.style.top = '540px';
+    const c = E('div', 'cardtext h2 grad', 'Remember what can’t.', el); c.style.top = '640px';
+    const d = E('div', 'cardtext sub', 'Built for Maritime', el); d.style.top = '820px'; d.style.fontSize = '36px';
+    return t => { pop(lg, t, L[0], .5); pop(a, t, L[0] + .15); pop(b, t, L[1]); pop(c, t, L[1] + 1.4); pop(d, t, L[1] + 2.6); };
+  },
+};
+
+// ---------- footage ----------
+function clip(el, s) {
+  const scr = E('div', 'screen', '', el), inner = E('div', 'inner', '', scr), img = E('img', '', '', inner);
+  const ratio = s.tm ? 1080 / 1920 : 1062 / 1920;
+  let iw = W, ih = W * ratio; if (ih < H) { iw *= H / ih; ih = H; }
+  inner.style.width = iw + 'px'; inner.style.height = ih + 'px';
+  const ox = (W - iw) / 2, oy = (H - ih) / 2;
+  if (s.blur) { const b = E('div', 'blur', '', inner); Object.assign(b.style, { left: s.blur[0] * iw + 'px', top: s.blur[1] * ih + 'px', width: s.blur[2] * iw + 'px', height: s.blur[3] * ih + 'px' }); }
+  let ring, dot; if (s.click) { ring = E('div', 'ring', '', inner); dot = E('div', 'dot', '', inner);
+    for (const r of [ring, dot]) { r.style.left = s.click[0] * iw + 'px'; r.style.top = s.click[1] * ih + 'px'; } }
+  const chip = E('div', 'chip', `<b>${s.tm ? 'TIME MACHINE' : 'LIVE'}</b>${s.tm ? (s.chip || 'Rewind screen') : s.chip + ' · on a Maritime computer'}`, el);
+  const sp = s.speed > 1.5 ? E('div', 'speed', 'Sped up ' + Math.round(s.speed) + '×', el) : null;
+  const caps = (Array.isArray(s.caption) ? s.caption : s.caption ? [[0, s.caption]] : []).map(([p, h], i, a) => ({ p, q: i + 1 < a.length ? a[i + 1][0] : 2, el: E('div', 'cap', h, el) }));
+  let crash, bar; if (s.overlay === 'crash') { crash = E('div', 'crash', '', scr); bar = E('div', 'bar', '⚠ ' + s.crash, crash); }
+  const keys = s.zoom || [[0, 1, .5, .5]];
+  let last = -1;
+  return async t => {
+    const u = clamp(t / s.dur);
+    let k = 0; while (k < keys.length - 1 && keys[k + 1][0] < u) k++;
+    const A = keys[k], Bk = keys[Math.min(k + 1, keys.length - 1)];
+    const f = Bk === A ? 0 : smooth((u - A[0]) / (Bk[0] - A[0]));
+    const z = A[1] + (Bk[1] - A[1]) * f, fx = A[2] + (Bk[2] - A[2]) * f, fy = A[3] + (Bk[3] - A[3]) * f;
+    let tx = W / 2 - z * fx * iw, ty = H / 2 - z * fy * ih;
+    tx = Math.min(Math.max(tx, W - z * iw), 0); ty = Math.min(Math.max(ty, H - z * ih), 0);
+    if (z * ih < H) ty = (H - z * ih) / 2; if (z * iw < W) tx = (W - z * iw) / 2;
+    if (z === 1) { tx = ox; ty = oy; }
+    inner.style.transform = `translate(${tx}px,${ty}px) scale(${z})`;
+    const idx = Math.min(Math.floor(clamp(t / s.dur) * s.frames) + 1, s.frames);   // footage spans the whole shot
+    if (idx !== last) { last = idx; img.src = `build2/shots/${s.id}/${String(idx).padStart(5, '0')}.jpg`; try { await img.decode(); } catch (e) {} }
+    pop(chip, t, .15, .35, 12); if (sp) pop(sp, t, .25, .35, 12);
+    for (const c of caps) { const t0 = Math.max(c.p * s.dur, c.p ? c.p * s.dur : .3), t1 = c.q * s.dur;
+      const a = ease((t - t0) / .35), o = c.q <= 1 ? 1 - clamp((t - (t1 - .2)) / .2) : 1;
+      c.el.style.opacity = a * o; c.el.style.transform = `translateY(${(1 - a) * 22}px)`; }
+    if (crash) { const c0 = s.dur * (s.crash_at || .08), c1 = s.crash_end ? s.dur * s.crash_end : 1e9,
+        e = ease((t - c0) / .25) * (1 - clamp((t - c1) / .25));
+      crash.style.background = `rgba(60,10,10,${.38 * e})`; bar.style.opacity = e;
+      const sh = t > c0 && t < c0 + .45 ? Math.sin((t - c0) * 70) * 14 * (1 - (t - c0) / .45) : 0;
+      bar.style.transform = `translate(calc(-50% + ${sh}px),-50%) scale(${.85 + .15 * e})`; }
+    if (ring) { const c0 = s.dur * s.click[2] - .35, p = (t - c0) / .5;
+      dot.style.opacity = p > 0 && p < 1.4 ? 1 : 0; ring.style.opacity = p > 0 && p < 1 ? 1 - p : 0;
+      ring.style.transform = `scale(${.6 + 1.4 * clamp(p)})`; dot.style.transform = `scale(${p > 0 && p < .3 ? .8 : 1})`; }
+  };
+}
+
+shots.forEach((s, k) => { s.fade = (k === 0 || s.kind === 'card' || shots[k - 1].kind === 'card') ? .35 : 0; });
+const built = shots.map(s => { const el = E('div', 'layer'); el.style.opacity = 0; return { s, el, draw: s.kind === 'card' ? cards[s.id](el, s.lines) : clip(el, s) }; });
+window.render = async t => {
+  const jobs = [];
+  for (const b of built) {
+    const X = b.s.fade, lt = t - b.s.start, on = lt >= -X && lt < b.s.dur;
+    if (!on) { b.el.style.opacity = 0; b.el.style.display = 'none'; continue; }
+    b.el.style.display = 'block';
+    const fin = X ? smooth((lt + X) / X) : 1; b.el.style.opacity = fin;
+    b.el.style.transform = `scale(${1.02 - .02 * fin})`;
+    jobs.push(b.draw(Math.max(lt, 0)));
+  }
+  await Promise.all(jobs); return true;
+};
+window.ready = true;
+</script></body></html>

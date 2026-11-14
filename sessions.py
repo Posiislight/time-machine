@@ -22,6 +22,10 @@ class Sessions:
                 CREATE TABLE IF NOT EXISTS session_effects(id TEXT PRIMARY KEY, lineage TEXT, operation_key TEXT, kind TEXT, status TEXT, detail TEXT, UNIQUE(lineage, operation_key));
                 CREATE TABLE IF NOT EXISTS session_events(seq INTEGER PRIMARY KEY AUTOINCREMENT, lineage TEXT, session TEXT, kind TEXT, detail TEXT, created TEXT);
             ''')
+            try:  # databases made before undo recipes existed
+                db.execute('ALTER TABLE session_effects ADD COLUMN undo TEXT')
+            except Exception:
+                pass
 
     def _row(self, db, session):
         row = db.execute('SELECT * FROM sessions WHERE id=?', (session,)).fetchone()
@@ -88,8 +92,8 @@ class Sessions:
             db.execute('BEGIN IMMEDIATE')
             self._event(db, self._row(db, sid), kind, detail)
 
-    def effect(self, sid, key, kind, status, detail):
-        if not key or kind not in ('payment', 'message', 'booking', 'external') or status not in ('pending', 'unknown', 'completed', 'not_completed'):
+    def effect(self, sid, key, kind, status, detail, undo=None):
+        if not key or kind not in ('payment', 'message', 'booking', 'external', 'change') or status not in ('pending', 'unknown', 'completed', 'not_completed'):
             raise ValueError('Invalid external action')
         with self.store.db() as db:
             db.execute('BEGIN IMMEDIATE')
@@ -98,7 +102,8 @@ class Sessions:
             if existing:
                 raise ValueError('Operation already recorded; reconcile its outcome before retrying')
             eid = uuid.uuid4().hex
-            db.execute('INSERT INTO session_effects VALUES(?,?,?,?,?,?)', (eid, row['lineage'], key, kind, status, detail))
+            db.execute('INSERT INTO session_effects(id,lineage,operation_key,kind,status,detail,undo) VALUES(?,?,?,?,?,?,?)',
+                       (eid, row['lineage'], key, kind, status, detail, None if undo is None else encoded(undo)))
             self._event(db, row, 'external_action', {'id': eid, 'kind': kind, 'status': status, 'detail': detail})
         return eid
 
@@ -114,6 +119,19 @@ class Sessions:
             db.execute('UPDATE session_effects SET status=? WHERE id=?', (status, eid))
             self._event(db, row, 'reconciled', {'id': eid, 'status': status, 'evidence': evidence})
 
+    def mark_undone(self, sid, eid, evidence):
+        """Record that a rewind really reversed a completed action that carried an undo recipe."""
+        if not isinstance(evidence, str) or not evidence.strip():
+            raise ValueError('Evidence is required')
+        with self.store.db() as db:
+            db.execute('BEGIN IMMEDIATE')
+            row = self._row(db, sid)
+            effect = db.execute('SELECT * FROM session_effects WHERE id=? AND lineage=?', (eid, row['lineage'])).fetchone()
+            if not effect or effect['status'] != 'completed' or not effect['undo']:
+                raise ValueError('Only completed actions with an undo recipe can be marked undone')
+            db.execute('UPDATE session_effects SET status=? WHERE id=?', ('undone', eid))
+            self._event(db, row, 'undone', {'id': eid, 'evidence': evidence})
+
     def _plan(self, db, sid, cid):
         row = self._row(db, sid)
         cp = db.execute('SELECT * FROM session_checkpoints WHERE id=? AND session=?', (cid, sid)).fetchone()
@@ -126,12 +144,14 @@ class Sessions:
         for e in effects:
             if e['status'] in ('pending', 'unknown'):
                 warnings.append(f"{e['kind']}: {e['detail']}. Outcome uncertain; verify with the service before resuming.")
+            elif e['status'] == 'completed' and e.get('undo'):
+                warnings.append(f"{e['kind']}: {e['detail']}. Rewind will undo this action.")
             elif e['status'] == 'completed':
                 warnings.append(f"{e['kind']}: {e['detail']}. Rewind cannot undo this action. It remains in the shared action ledger.")
         resources = []
         for name, value in document['resources'].items():
             mode = value['recovery']
-            description = {'logical': 'Restore recorded logical state in a local branch',
+            description = {'logical': 'The agent picks up from this point',
                            'snapshot': 'Start a new machine from the saved snapshot; the current machine is left untouched'}.get(
                                mode, 'Observation only; live machine or network restoration is unavailable')
             resources.append({'name': name, 'mode': mode, 'description': description})
@@ -176,20 +196,3 @@ class Sessions:
             db.execute('INSERT INTO sessions VALUES(?,?,?,?)', (branch, row['lineage'], cid, encoded(original)))
             self._event(db, {'id': branch, 'lineage': row['lineage']}, 'rewound', {'checkpoint': cid, 'receipt': receipt})
             return branch
-
-    def shopping_demo(self, uncertain=False):
-        resources = {
-            'agent': {'recovery': 'logical', 'state': {'goal': 'Buy headphones within budget', 'step': 'Compare basket'}},
-            'browser': {'recovery': 'logical', 'state': {'url': 'demo-shop.local/cart', 'cart': ['Headphones'], 'total': '25000 NGN'}, 'adapter': 'simulated browser'},
-            'android': {'recovery': 'unavailable', 'state': {'app': 'Shopping app', 'screen': 'Basket'}, 'adapter': 'recorded observation'},
-            'network': {'recovery': 'unavailable', 'state': {'mode': 'country', 'countryCode': 'NG', 'session': 'sticky', 'observedIp': '192.0.2.10'}, 'adapter': 'recorded observation; previous IP cannot be reclaimed'}
-        }
-        sid = self.create('Shopping recovery / simulated devices', resources)
-        self.checkpoint(sid, 'Before checkout')
-        self.effect(sid, 'checkout-order-001', 'payment', 'unknown' if uncertain else 'completed', 'NGN 25,000 headphones payment; order demo-001')
-        self.effect(sid, 'order-email-001', 'message', 'completed', 'Order confirmation email sent')
-        resources['agent']['state']['step'] = 'Connection lost after checkout'
-        resources['browser']['state']['url'] = 'demo-shop.local/connection-error'
-        resources['network']['state']['observedIp'] = '192.0.2.20'
-        self.update(sid, resources)
-        return sid

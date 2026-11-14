@@ -8,12 +8,13 @@ from recovery import compare, repair_catalogue
 from maritime import Maritime
 from sessions import Sessions
 from live import Live
+from workspace import Workspace
 BASE=Path(__file__).resolve().parent
 if (BASE/'.env').exists():
     for line in (BASE/'.env').read_text(encoding='utf-8-sig').splitlines():
         if '=' in line and not line.lstrip().startswith('#'):
             k,v=line.split('=',1);os.environ.setdefault(k.strip(),v.strip().strip('"').strip("'"))
-store=Store(BASE/'data'); token=secrets.token_urlsafe(32); active=set(); errors={}; guard=threading.Lock()
+store=Store(Path(os.environ.get('TIME_MACHINE_DATA') or BASE/'data')); token=secrets.token_urlsafe(32); active=set(); errors={}; guard=threading.Lock()
 for old in store.list_runs():
     if old['status']=='running': store.status(old['id'],'interrupted')
 def sample():
@@ -48,7 +49,7 @@ class Handler(BaseHTTPRequestHandler):
             if u.path=='/api/session': return self.send(200,Sessions(store).state(q['id'][0]))
             if u.path=='/api/rewind-preview': return self.send(200,Sessions(store).preview(q['session'][0],q['checkpoint'][0]))
             if u.path=='/api/file':return self.send(200,{'content':store.read(q['run'][0],q['path'][0])})
-            name={'/':'index.html','/app.js':'app.js','/style.css':'style.css'}.get(u.path)
+            name={'/':'index.html','/app.js':'app.js','/style.css':'style.css','/classic':'classic.html','/classic.js':'classic.js','/classic.css':'classic.css'}.get(u.path)
             if not name:return self.send(404,{'error':'Not found'})
             kind={'html':'text/html; charset=utf-8','js':'application/javascript','css':'text/css'}[name.split('.')[-1]]
             return self.send(200,(BASE/'static'/name).read_bytes(),kind)
@@ -80,14 +81,19 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200,{'result':result,'effect':eid})
             if path=='/api/live/suggest': return self.send(200,Live().suggest(b['computer'],b['task']))
             if path.startswith('/api/session/'):
-                engine=Sessions(store)
-                if path=='/api/session/demo': return self.send(200,{'id':engine.shopping_demo(b.get('uncertain',False))})
+                engine=Sessions(store); workspace=Workspace(engine)
                 if path=='/api/session/create': return self.send(200,{'id':engine.create(b['title'],b['resources'])})
                 if path=='/api/session/checkpoint': return self.send(200,{'id':engine.checkpoint(b['session'],b['label'])})
                 if path=='/api/session/update': engine.update(b['session'],b['resources']); return self.send(200,{'ok':True})
                 if path=='/api/session/effect': return self.send(200,{'id':engine.effect(b['session'],b['key'],b['kind'],b['status'],b['detail'])})
                 if path=='/api/session/reconcile': engine.reconcile(b['session'],b['effect'],b['status'],b['evidence']); return self.send(200,{'ok':True})
-                if path=='/api/session/rewind': return self.send(200,{'id':engine.rewind(b['session'],b['checkpoint'],b['receipt'],b.get('acknowledge'))})
+                if path=='/api/session/rewind': return self.send(200,{'id':workspace.rewind(b['session'],b['checkpoint'],b['receipt'],b.get('acknowledge'))})
+                if path=='/api/session/start': return self.send(200,{'id':workspace.start(b['title'])})
+                if path=='/api/session/task': return self.send(200,{'id':workspace.start_task(b['title'],b['computer'])})
+                if path=='/api/session/do': return self.send(200,{'id':workspace.do(b['session'],b['description'],b['actions'],b.get('undo'),b.get('kind','change'),b.get('key'))})
+                if path=='/api/session/run': return self.send(200,workspace.run(b['session'],b['cmd'],b.get('external')))
+                if path=='/api/session/publish': return self.send(200,{'name':workspace.publish(b['session'],b['name'])})
+                if path=='/api/session/end': workspace.end(b['session']); return self.send(200,{'ok':True})
             if path=='/api/maritime/agents': return self.send(200,{'agents':Maritime().agents()})
             if path=='/api/maritime/files': return self.send(200,Maritime().files(b['agent']))
             if path=='/api/maritime/capture': return self.send(200,{'id':Maritime().capture(store,b['agent'],b['paths'])})

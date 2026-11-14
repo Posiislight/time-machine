@@ -111,6 +111,9 @@ class Sandboxes:
     def kill(self, sandbox):
         return self._api('DELETE', '/v1/sandboxes/' + self.sandbox_id(sandbox))
 
+    def snapshots(self):
+        return self._api('GET', '/v1/snapshots').get('data', [])
+
     def delete_snapshot(self, snapshot):
         return self._api('DELETE', '/v1/snapshots/' + self.name(snapshot))
 
@@ -139,11 +142,20 @@ class SandboxAdapter:
 
     def execute(self, action, operation_key=None):
         # operation_key is ledger-only here: Maritime documents no idempotency key for commands.
+        if action.get('publish'):
+            # A named snapshot others can start machines from. Rewinding never deletes it.
+            return self.client.save(self.sandbox, action['publish'])
         return self.client.run(self.sandbox, action.get('cmd'))
 
     def verify(self, result):
         if self.verifier:
             return self.verifier(result)
+        if isinstance(result, dict) and result.get('sourceSandboxId') == self.sandbox and result.get('name'):
+            # A publish: ask Maritime whether the snapshot really exists rather than trusting the reply.
+            for snap in self.client.snapshots():
+                if snap.get('name') == result['name'] and snap.get('sourceSandboxId') == self.sandbox:
+                    return {'status': 'completed', 'evidence': 'Maritime lists snapshot "' + result['name'] + '" from this machine.'}
+            return {'status': 'unknown', 'evidence': 'Maritime did not list the snapshot after saving it.'}
         return {'status': 'unknown', 'evidence': 'No verifier configured; the command result is not proof of the outcome.'}
 
     def restore(self, state):

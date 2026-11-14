@@ -15,7 +15,7 @@ class SessionRunner:
         self.sessions.update(self.session, captured)
         return self.sessions.checkpoint(self.session, label)
 
-    def act(self, resource, action, *, operation_key=None, effect_kind=None, description=None):
+    def act(self, resource, action, *, operation_key=None, effect_kind=None, description=None, label=None):
         adapter = self.adapters.get(resource)
         if adapter is None:
             raise ValueError('No adapter for resource')
@@ -43,7 +43,7 @@ class SessionRunner:
             return result
         finally:
             # Unknown or pending effects deliberately survive exceptions; never auto-retry them.
-            self.checkpoint('After action / ' + resource)
+            self.checkpoint(label or 'After action / ' + resource)
 
 
 def rewind_and_restore(sessions, session, checkpoint, receipt, acknowledge, adapters):

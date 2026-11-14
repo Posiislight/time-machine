@@ -2,6 +2,7 @@ import tempfile
 import unittest
 from core import Store
 from sessions import Sessions
+from fixtures import seeded_session
 
 class SessionTests(unittest.TestCase):
     def setUp(self):
@@ -9,7 +10,7 @@ class SessionTests(unittest.TestCase):
         self.engine=Sessions(Store(self.temp.name))
     def tearDown(self): self.temp.cleanup()
     def demo(self,uncertain=False):
-        sid=self.engine.shopping_demo(uncertain)
+        sid=seeded_session(self.engine,uncertain)
         cp=self.engine.state(sid)['checkpoints'][0]['id']
         return sid,cp
     def test_rewind_preserves_external_effects_without_restoring_observations(self):

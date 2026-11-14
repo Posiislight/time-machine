@@ -16,7 +16,7 @@ class FakeMaritime:
     """In-memory stand-in for the documented sandbox routes. Disk is a dict."""
 
     def __init__(self):
-        self.sandboxes, self.snapshots, self.calls, self.n = {}, {}, [], 0
+        self.sandboxes, self.snapshots, self.sources, self.calls, self.n = {}, {}, {}, [], 0
         self.fail_command = None
 
     def __call__(self, method, url, body=None, headers=None):
@@ -25,6 +25,8 @@ class FakeMaritime:
         path = urlparse(url).path
         if path == '/v1/sandboxes' and method == 'POST':
             return self.create(body)
+        if path == '/v1/snapshots' and method == 'GET':
+            return 200, {'data': [{'name': n, 'sourceSandboxId': src} for n, src in self.sources.items()]}
         if path.startswith('/v1/sandboxes/') and path.endswith('/save') and method == 'POST':
             return self.save(path.split('/')[3], body)
         if path.startswith('/v1/sandboxes/') and method == 'GET':
@@ -54,7 +56,8 @@ class FakeMaritime:
 
     def save(self, sid, body):
         self.snapshots[body['name']] = dict(self.sandboxes[sid]['disk'])
-        return 200, {'name': body['name']}
+        self.sources[body['name']] = sid
+        return 200, {'name': body['name'], 'sourceSandboxId': sid}
 
     def command(self, path, body, headers):
         token = headers.get('X-Maritime-Token')  # the fake finds the sandbox by its secret
